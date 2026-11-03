@@ -145,25 +145,24 @@ let selectedImages = [];
 let currentProducts = [];
 let adminToken = '';
 
-async function api(url,options={}) {
-    const response = await fetch(url,{
+async function api(url, options = {}) {
+    const response = await fetch(url, {
         ...options,
-        credentials:'same-origin',
-       headers: {
-    ...(options.body ? {'Content-Type':'application/json'} : {}),
-    ...(adminToken ? {'Authorization':'Bearer ' + adminToken} : {}),
-    ...(options.headers || {})
-}
+        credentials: 'same-origin',
+        headers: {
+            ...(options.body ? {
+                'Content-Type': 'application/json'
+            } : {}),
+            ...(adminToken ? {
+                'Authorization': 'Bearer ' + adminToken
+            } : {}),
+            ...(options.headers || {})
+        }
+    });
 
-    const data = await response.json().catch(()=>({}));
+    const data = await response.json().catch(() => ({}));
 
-    if(response.status === 401) {
-        $('dashboard').style.display='none';
-        $('login').style.display='block';
-        throw new Error('Session expired. Please login again.');
-    }
-
-    if(!response.ok) {
+    if (!response.ok) {
         throw new Error(data.error || 'Request failed');
     }
 
@@ -467,14 +466,13 @@ $('loginForm').onsubmit = async event => {
     }
 };
 
-$('logout').onclick=async()=>{
-    try {
-        await api('/api/auth/logout',{method:'POST'});
-    } finally {
-        $('dashboard').style.display='none';
-        $('login').style.display='block';
-        $('password').value='';
-    }
+$('logout').onclick = () => {
+    adminToken = '';
+
+    $('dashboard').style.display = 'none';
+    $('login').style.display = 'block';
+    $('password').value = '';
+    $('loginError').textContent = '';
 };
 
 // Restore authenticated session after page refresh.
