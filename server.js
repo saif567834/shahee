@@ -48,5 +48,10 @@ app.get('/api/admin/orders',auth,async(q,s)=>s.json(await Order.find().sort('-cr
 app.patch('/api/admin/orders/:id',auth,async(q,s)=>s.json(await Order.findByIdAndUpdate(q.params.id,{status:str(q.body.status,20)},{new:true})));
 app.post('/api/admin/gallery',auth,async(q,s)=>{const u=str(q.body.imageUrl,500);if(!/^https:\/\//.test(u))return s.status(400).json({error:'Image URL must start with https://'});s.json(await Gallery.create({imageUrl:u,caption:str(q.body.caption,120),link:str(q.body.link,300)}))});
 app.delete('/api/admin/gallery/:id',auth,async(q,s)=>{await Gallery.findByIdAndDelete(q.params.id);s.json({ok:true})});
-app.use(express.static(path.join(__dirname,'public')));
-app.listen(process.env.PORT||3000,()=>console.log('Running on port '+(process.env.PORT||3000)));
+// Serve website files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Start server
+app.listen(process.env.PORT || 3000, () => {
+  console.log('Running on port ' + (process.env.PORT || 3000));
+});
