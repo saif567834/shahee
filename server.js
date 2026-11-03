@@ -31,9 +31,19 @@ app.post('/api/payment/verify',rl({windowMs:6e4,max:20}),async(q,s)=>{
  s.json({ok:!!o})}catch(e){s.status(500).json({ok:false})}});
 app.get('/api/gallery',async(q,s)=>s.json(await Gallery.find().sort('-createdAt').limit(12)));
 app.post('/api/admin/login',rl({windowMs:9e5,max:10}),(q,s)=>{
- const a=Buffer.from(str(q.body.password,200)),b=Buffer.from(process.env.ADMIN_PASSWORD||'');
- if(a.length===b.length&&b.length&&crypto.timingSafeEqual(a,b)){const t=crypto.randomBytes(24).toString('hex');tokens.add(t);return s.json({token:t})}
- s.status(401).json({error:'Wrong password'})});
+app.post('/api/admin/login', (q, s) => {
+  const a = Buffer.from(str(q.body.password, 200));
+  const b = Buffer.from(process.env.ADMIN_PASSWORD || '');
+
+  if (a.length === b.length && b.length &&
+      crypto.timingSafeEqual(a, b)) {
+    const t = crypto.randomBytes(24).toString('hex');
+    tokens.add(t);
+    return s.json({ token: t });
+  }
+
+  s.status(401).json({ error: 'Wrong password' });
+});
 app.get('/api/admin/orders',auth,async(q,s)=>s.json(await Order.find().sort('-createdAt').limit(200)));
 app.patch('/api/admin/orders/:id',auth,async(q,s)=>s.json(await Order.findByIdAndUpdate(q.params.id,{status:str(q.body.status,20)},{new:true})));
 app.post('/api/admin/gallery',auth,async(q,s)=>{const u=str(q.body.imageUrl,500);if(!/^https:\/\//.test(u))return s.status(400).json({error:'Image URL must start with https://'});s.json(await Gallery.create({imageUrl:u,caption:str(q.body.caption,120),link:str(q.body.link,300)}))});
