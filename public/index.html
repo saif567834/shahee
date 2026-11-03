@@ -40,6 +40,7 @@ h2{font-size:clamp(1.8rem,4vw,3rem);text-align:center;margin-bottom:12px}
 .ic{background:var(--card);border:1px solid #d9b25f33;padding:26px 14px;text-align:center;border-radius:14px;transform-style:preserve-3d;transition:transform .2s,border-color .3s}
 .ic:hover{border-color:var(--gold)}.ic i{font-style:normal;font-size:2rem;display:block;margin-bottom:8px}
 .shop{display:grid;grid-template-columns:1fr 1fr;gap:5vw;max-width:1000px;margin:auto;align-items:center}
+.extra-products{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;max-width:1100px;margin:30px auto}.extra-product{background:var(--card);border:1px solid #d9b25f44;border-radius:14px;padding:16px}.extra-product img{width:100%;height:220px;object-fit:cover;border-radius:9px}.extra-product h3{color:var(--gold2);margin:12px 0 6px}.extra-product p{color:var(--mut);font-size:14px;line-height:1.5}.extra-product .btn{margin-top:8px}
 .pb{background:var(--card);border:1px solid #d9b25f33;border-radius:18px;padding:30px}
 .sz{display:flex;gap:10px;margin:18px 0}.sz button{flex:1;padding:14px;background:transparent;color:var(--tx);border:1px solid #d9b25f55;border-radius:10px;transition:.3s}
 .sz button[aria-pressed=true]{background:linear-gradient(135deg,var(--gold),#a37c2c);color:#1a1205;font-weight:700}
@@ -90,6 +91,7 @@ footer a{margin:0 10px;color:var(--gold2)}
 <div class="q"><button id="mi" aria-label="Decrease">−</button><b id="qt">1</b><button id="pl" aria-label="Increase">+</button></div>
 <div class="cta" style="margin-top:6px"><button class="btn f" id="add">ADD TO CART</button><button class="btn" id="buy">BUY NOW</button></div>
 <div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-t="0">Benefits</button><button role="tab" aria-selected="false" data-t="1">Ingredients</button><button role="tab" aria-selected="false" data-t="2">Directions</button></div><div id="tp"></div></div></div></section>
+<section id="more-products"><h2>More <span class="gold">Products</span></h2><div class="rule"></div><p class="sub">Explore products newly added by SHAHEE ORGANIC.</p><div class="extra-products" id="dynamic-products"></div></section>
 <section class="ig" id="insta"><h2 class="rv">Follow Our <span class="gold">Natural Beauty Journey</span></h2><div class="rule"></div>
 <a class="igc" href="https://www.instagram.com/madanapalli_promotions/" target="_blank" rel="noopener"><span style="font-size:1.6rem">◎</span><b>@madanapalli_promotions</b></a><br>
 <a class="btn f" href="https://www.instagram.com/madanapalli_promotions/" target="_blank" rel="noopener">FOLLOW US ON INSTAGRAM</a>
@@ -129,15 +131,18 @@ const T=['Reduces hair fall, promotes hair growth, nourishes scalp, adds natural
 const tab=i=>{$('#tp').textContent=T[i];$$('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t==i))};tab(0);$$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 const upd=()=>{$('#pr').textContent='₹'+P[sz]*qty;$('#qt').textContent=qty;$$('.sz button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s==sz))};
 $$('.sz button').forEach(b=>b.onclick=()=>{sz=+b.dataset.s;upd()});$('#mi').onclick=()=>{qty=Math.max(1,qty-1);upd()};$('#pl').onclick=()=>{qty++;upd()};
-function draw(){$('#cn').textContent=cart.reduce((a,c)=>a+c.q,0);$('#items').innerHTML=cart.map((c,i)=>`<div class="li"><span>${c.s} ml × ${c.q}</span><span>₹${P[c.s]*c.q} <button data-i="${i}" class="rm" aria-label="Remove" style="background:none;border:0;color:var(--gold2)">✕</button></span></div>`).join('')||'<p style="color:var(--mut)">Your cart is empty.</p>';
-$('#tot').textContent='₹'+cart.reduce((a,c)=>a+P[c.s]*c.q,0);$$('.rm').forEach(b=>b.onclick=()=>{cart.splice(b.dataset.i,1);draw()})}
-function add(){const f=cart.find(c=>c.s==sz);f?f.q+=qty:cart.push({s:sz,q:qty});draw();const b=$('#cartb');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop')}
+function linePrice(c){return Number(c.price??P[c.s]??0)}
+function draw(){$('#cn').textContent=cart.reduce((a,c)=>a+c.q,0);$('#items').innerHTML=cart.map((c,i)=>`<div class="li"><span>${c.name?c.name:(c.s+' ml')} × ${c.q}</span><span>₹${linePrice(c)*c.q} <button data-i="${i}" class="rm" aria-label="Remove" style="background:none;border:0;color:var(--gold2)">✕</button></span></div>`).join('')||'<p style="color:var(--mut)">Your cart is empty.</p>';
+$('#tot').textContent='₹'+cart.reduce((a,c)=>a+linePrice(c)*c.q,0);$$('.rm').forEach(b=>b.onclick=()=>{cart.splice(b.dataset.i,1);draw()})}
+function add(){const f=cart.find(c=>!c.productId&&c.s==sz);f?f.q+=qty:cart.push({s:sz,q:qty,price:P[sz],name:'SHAHEE '+sz+' ml'});draw();const b=$('#cartb');b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop')}
+function safeHtml(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}
+async function loadDynamicProducts(){try{const products=await(await fetch('/api/products')).json();$('#dynamic-products').innerHTML=products.map(p=>`<article class="extra-product"><img loading="lazy" src="${p.imageData}" alt="${safeHtml(p.name)}"><h3>${safeHtml(p.name)}</h3><p>${safeHtml(p.description||'')}</p><p><b>₹${p.discountPrice||p.price}</b> ${p.discountPrice?`<del>₹${p.price}</del>`:''} · ${p.stock} in stock</p><button class="btn f" data-product="${p._id}" ${p.stock<1?'disabled':''}>ADD TO CART</button></article>`).join('')||'<p class="sub">New products will appear here soon.</p>';$$('[data-product]').forEach(b=>b.onclick=()=>{const p=products.find(x=>x._id===b.dataset.product);if(!p)return;const f=cart.find(c=>c.productId===p._id);if(f)f.q=Math.min(f.q+1,p.stock);else cart.push({productId:p._id,name:p.name,price:p.discountPrice||p.price,q:1});draw();$('#cartb').classList.add('pop')})}catch(e){console.warn('Could not load products',e)}}
 $('#add').onclick=add;$('#buy').onclick=()=>{add();$('#dr').classList.add('o')};$('#cartb').onclick=()=>$('#dr').classList.add('o');$('#cx').onclick=()=>$('#dr').classList.remove('o');
 addEventListener('keydown',e=>e.key==='Escape'&&$('#dr').classList.remove('o'));
 $('#send').onclick=async()=>{if(!cart.length)return alert('Your cart is empty.');if(!$('#nm').value||!$('#ph').value||!$('#ad').value)return alert('Please fill name, phone and address.');
-const m=`New order — SHAHEE ORGANIC\n`+cart.map(c=>`${c.s} ml × ${c.q} = ₹${P[c.s]*c.q}`).join('\n')+`\nTotal: ${$('#tot').textContent}\nPayment: ${$('#pay').value}\nName: ${$('#nm').value}\nPhone: ${$('#ph').value}\nAddress: ${$('#ad').value}`;
+const m=`New order — SHAHEE ORGANIC\n`+cart.map(c=>`${c.name||(c.s+' ml')} × ${c.q} = ₹${linePrice(c)*c.q}`).join('\n')+`\nTotal: ${$('#tot').textContent}\nPayment: ${$('#pay').value}\nName: ${$('#nm').value}\nPhone: ${$('#ph').value}\nAddress: ${$('#ad').value}`;
 const hd={'Content-Type':'application/json'},online=/Razorpay/.test($('#pay').value),wa=()=>'https://wa.me/'+N+'?text='+encodeURIComponent(m);
-const body=JSON.stringify({name:$('#nm').value,phone:$('#ph').value,address:$('#ad').value,payment:$('#pay').value,items:cart,total:cart.reduce((a,c)=>a+P[c.s]*c.q,0)});
+const body=JSON.stringify({name:$('#nm').value,phone:$('#ph').value,address:$('#ad').value,payment:$('#pay').value,items:cart.map(c=>({s:c.s,q:c.q,productId:c.productId})),total:cart.reduce((a,c)=>a+linePrice(c)*c.q,0)});
 if(!online){try{fetch('/api/orders',{method:'POST',keepalive:true,headers:hd,body})}catch(e){}open(wa(),'_blank');return}
 const btn=$('#send');btn.disabled=true;
 try{const r=await(await fetch('/api/orders',{method:'POST',headers:hd,body})).json();if(!r.rzp)throw 0;
@@ -147,5 +152,5 @@ handler:async p=>{let ok=false;try{ok=(await(await fetch('/api/payment/verify',{
 alert(ok?'Payment successful! Thank you for your order.':'We could not confirm your payment. Please contact us on WhatsApp.');if(ok){cart=[];draw();$('#dr').classList.remove('o')}btn.disabled=false;location.href=wa()},
 modal:{ondismiss:()=>{btn.disabled=false}}}).open()}
 catch(e){alert('Online payment is unavailable right now. Please choose Cash on Delivery.');btn.disabled=false}};draw();
-fetch('/api/gallery').then(r=>r.json()).then(g=>{if(g.length)$('#gal').innerHTML=g.slice(0,6).map(x=>`<a href="${x.link||'https://www.instagram.com/madanapalli_promotions/'}" target="_blank" rel="noopener"><img loading="lazy" src="${x.imageUrl}" alt="${x.caption||'SHAHEE ORGANIC'}"><span>${x.caption||''}</span></a>`).join('')}).catch(()=>{});
+fetch('/api/gallery').then(r=>r.json()).then(g=>{if(g.length)$('#gal').innerHTML=g.slice(0,6).map(x=>`<a href="${x.link||'https://www.instagram.com/madanapalli_promotions/'}" target="_blank" rel="noopener"><img loading="lazy" src="${x.imageUrl}" alt="${x.caption||'SHAHEE ORGANIC'}"><span>${x.caption||''}</span></a>`).join('')}).catch(()=>{});loadDynamicProducts();
 </script></body></html>
