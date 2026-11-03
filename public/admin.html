@@ -1,17 +1,496 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>SHAHEE Admin</title>
-<style>body{font-family:system-ui;background:#070b07;color:#f3ecd8;margin:0;padding:20px}h1,h2{color:#d9b25f}input,select,button{padding:9px;margin:4px 0;background:#000;color:#f3ecd8;border:1px solid #d9b25f66;border-radius:6px;font:inherit}button{cursor:pointer;background:#d9b25f;color:#1a1205;font-weight:700}table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:8px;border-bottom:1px solid #d9b25f33;text-align:left;vertical-align:top}.g{display:flex;flex-wrap:wrap;gap:10px}.g div{width:140px;font-size:12px}.g img{width:140px;height:140px;object-fit:cover;border-radius:8px}#app{display:none;max-width:1000px;margin:auto;overflow-x:auto}#lg{max-width:320px;margin:15vh auto}</style></head><body>
-<div id="lg"><h1>SHAHEE Admin</h1><input id="pw" type="password" placeholder="Password" style="width:100%"><button id="go" style="width:100%">Login</button><p id="er"></p></div>
-<div id="app"><h1>Orders</h1><table><thead><tr><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead><tbody id="ob"></tbody></table>
-<h2>Instagram / Gallery</h2><div><input id="iu" placeholder="https://image-url" size="40"> <input id="ic" placeholder="Caption"> <input id="il" placeholder="Post link (optional)"> <button id="ia">Add</button></div><div class="g" id="gl"></div></div>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>SHAHEE Admin Dashboard</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px;background:#070b07;color:#f3ecd8;font-family:system-ui}
+h1,h2,h3{color:#d9b25f}
+input,textarea,button{padding:11px;margin:5px 0;border:1px solid #d9b25f66;border-radius:7px;font:inherit}
+input,textarea{background:#000;color:white;width:100%}
+button{background:#d9b25f;color:#1a1205;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+#login{max-width:360px;margin:12vh auto}
+#dashboard{display:none;max-width:1200px;margin:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:block;color:#d9b25f;font-size:13px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.panel{background:#101810;border:1px solid #d9b25f44;border-radius:12px;padding:16px;margin:18px 0}
+.products,.preview{display:flex;gap:12px;flex-wrap:wrap}
+.product{background:#101810;border:1px solid #d9b25f44;border-radius:10px;padding:12px;width:220px}
+.product img{width:100%;height:150px;object-fit:cover;border-radius:7px}
+.preview-item{width:140px;background:#101810;padding:8px;border-radius:8px}
+.preview-item img{width:100%;height:110px;object-fit:cover}
+.hint{color:#b9b39c;font-size:13px}
+.status{color:#d9b25f}
+table{width:100%;border-collapse:collapse;min-width:700px}
+td,th{padding:10px;border-bottom:1px solid #d9b25f44;text-align:left}
+.tablewrap{overflow-x:auto}
+.danger{background:#8d2929;color:white}
+.secondary{background:#444;color:white}
+#message{white-space:pre-wrap}
+</style>
+</head>
+
+<body>
+
+<div id="login">
+<h1>SHAHEE ADMIN</h1>
+<form id="loginForm">
+<label>Admin Email
+<input id="email" type="email" required placeholder="Admin email">
+</label>
+<label>Admin Password
+<input id="password" type="password" required placeholder="Password">
+</label>
+<button style="width:100%">LOGIN</button>
+</form>
+<p id="loginError"></p>
+</div>
+
+<div id="dashboard">
+
+<header class="actions">
+<h1>SHAHEE ADMIN DASHBOARD</h1>
+<button id="logout">Logout</button>
+</header>
+
+<section class="panel">
+<h2>Product Management</h2>
+<p class="hint">Add, edit and delete products. Upload up to 4 JPG, PNG or WEBP images per product. Maximum 2 MB each.</p>
+
+<form id="productForm">
+<input type="hidden" id="productId">
+
+<div class="grid">
+
+<label>Product name *
+<input id="name" required maxlength="100" placeholder="Product name">
+</label>
+
+<label>Product images *
+<input id="images" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+</label>
+
+<label>Price (₹) *
+<input id="price" type="number" min="1" step="0.01" required>
+</label>
+
+<label>Discount price (₹)
+<input id="discount" type="number" min="0" step="0.01">
+</label>
+
+<label>Stock quantity *
+<input id="stock" type="number" min="0" step="1" value="0" required>
+</label>
+
+<label>Description
+<textarea id="description" maxlength="2000" rows="4"></textarea>
+</label>
+
+<label>Ingredients
+<textarea id="ingredients" maxlength="1000" rows="4"></textarea>
+</label>
+
+</div>
+
+<h3>Product Image Preview</h3>
+<div id="preview" class="preview"></div>
+
+<div class="actions">
+<button id="saveButton" type="submit">ADD PRODUCT</button>
+<button id="cancelButton" class="secondary" type="button">CANCEL</button>
+</div>
+
+<p id="message" class="hint"></p>
+</form>
+</section>
+
+<section class="panel">
+<div class="actions">
+<h2>All Products</h2>
+<button id="refresh">Refresh Products</button>
+</div>
+<div id="products" class="products"></div>
+</section>
+
+<section class="panel">
+<h2>Orders</h2>
+<div class="tablewrap">
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Customer</th>
+<th>Products</th>
+<th>Total</th>
+<th>Payment</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="orders"></tbody>
+</table>
+</div>
+</section>
+
+</div>
+
 <script>
-let T=sessionStorage.getItem('t');const $=s=>document.querySelector(s);
-const api=(p,o={})=>fetch(p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+T}}).then(r=>{if(r.status===401){sessionStorage.removeItem('t');location.reload()}return r.json()});
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-async function load(){$('#lg').style.display='none';$('#app').style.display='block';
-const o=await api('/api/admin/orders');$('#ob').innerHTML=o.map(x=>`<tr><td>${new Date(x.createdAt).toLocaleString()}</td><td>${esc(x.name)}<br>${esc(x.phone)}<br>${esc(x.address)}</td><td>${x.items.map(i=>i.s+' ml × '+i.q).join('<br>')}</td><td>₹${x.total}</td><td>${esc(x.payment)}</td><td><select data-id="${x._id}">${['New','Confirmed','Shipped','Delivered','Cancelled','Pending payment'].map(s=>`<option ${s==x.status?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('');
-document.querySelectorAll('select[data-id]').forEach(s=>s.onchange=()=>api('/api/admin/orders/'+s.dataset.id,{method:'PATCH',body:JSON.stringify({status:s.value})}));
-const g=await fetch('/api/gallery').then(r=>r.json());$('#gl').innerHTML=g.map(x=>`<div><img src="${esc(x.imageUrl)}" alt=""><br>${esc(x.caption)}<br><button data-d="${x._id}">Delete</button></div>`).join('');
-document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{await api('/api/admin/gallery/'+b.dataset.d,{method:'DELETE'});load()})}
-$('#go').onclick=async()=>{const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('#pw').value})}).then(r=>r.json());if(r.token){T=r.token;sessionStorage.setItem('t',T);load()}else $('#er').textContent=r.error};
-$('#ia').onclick=async()=>{const r=await api('/api/admin/gallery',{method:'POST',body:JSON.stringify({imageUrl:$('#iu').value,caption:$('#ic').value,link:$('#il').value})});if(r.error)alert(r.error);else{$('#iu').value='';load()}};
-if(T)load();</script></body></html>
+const $ = id => document.getElementById(id);
+
+let selectedImages = [];
+let currentProducts = [];
+
+async function api(url,options={}) {
+    const response = await fetch(url,{
+        ...options,
+        credentials:'same-origin',
+        headers:{
+            ...(options.body ? {'Content-Type':'application/json'} : {}),
+            ...(options.headers || {})
+        }
+    });
+
+    const data = await response.json().catch(()=>({}));
+
+    if(response.status === 401) {
+        $('dashboard').style.display='none';
+        $('login').style.display='block';
+        throw new Error('Session expired. Please login again.');
+    }
+
+    if(!response.ok) {
+        throw new Error(data.error || 'Request failed');
+    }
+
+    return data;
+}
+
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+    })[c]);
+}
+
+function renderPreview() {
+    $('preview').innerHTML = selectedImages.map((img,index)=>`
+        <div class="preview-item">
+            <img src="${img}" alt="Product image">
+            <button type="button" data-remove="${index}" class="danger">
+                Remove
+            </button>
+        </div>
+    `).join('');
+
+    document.querySelectorAll('[data-remove]').forEach(button=>{
+        button.onclick=()=>{
+            selectedImages.splice(Number(button.dataset.remove),1);
+            renderPreview();
+        };
+    });
+}
+
+async function fileToDataURL(file) {
+    return new Promise((resolve,reject)=>{
+        const reader = new FileReader();
+        reader.onload=()=>resolve(reader.result);
+        reader.onerror=()=>reject(new Error('Image reading failed'));
+        reader.readAsDataURL(file);
+    });
+}
+
+$('images').addEventListener('change',async event=>{
+    const files=Array.from(event.target.files);
+
+    if(files.length > 4 || selectedImages.length + files.length > 4) {
+        $('message').textContent='Maximum 4 images per product.';
+        event.target.value='';
+        return;
+    }
+
+    if(files.some(f=>f.size > 2*1024*1024)) {
+        $('message').textContent='Each image must be below 2 MB.';
+        event.target.value='';
+        return;
+    }
+
+    if(files.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type))) {
+        $('message').textContent='Only JPG, PNG and WEBP allowed.';
+        event.target.value='';
+        return;
+    }
+
+    try {
+        const newImages=await Promise.all(files.map(fileToDataURL));
+        selectedImages.push(...newImages);
+        renderPreview();
+        $('message').textContent='Images added successfully.';
+    } catch(error) {
+        $('message').textContent=error.message;
+    }
+
+    event.target.value='';
+});
+
+function resetForm() {
+    $('productForm').reset();
+    $('productId').value='';
+    $('stock').value=0;
+    selectedImages=[];
+    $('saveButton').textContent='ADD PRODUCT';
+    $('message').textContent='';
+    renderPreview();
+}
+
+function editProduct(product) {
+    $('productId').value=product._id;
+    $('name').value=product.name;
+    $('price').value=(product.pricePaise/100).toFixed(2);
+    $('discount').value=product.discountPricePaise
+        ? (product.discountPricePaise/100).toFixed(2) : '';
+    $('stock').value=product.stock;
+    $('description').value=product.description || '';
+    $('ingredients').value=product.ingredients || '';
+
+    selectedImages=[...(product.images || [])];
+
+    // Support previously saved single-image products.
+    if(!selectedImages.length && product.imageData) {
+        selectedImages=[product.imageData];
+    }
+
+    $('saveButton').textContent='SAVE CHANGES';
+    $('message').textContent='Editing '+product.name;
+
+    renderPreview();
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function loadProducts() {
+    try {
+        currentProducts=await api('/api/admin/products');
+
+        $('products').innerHTML=currentProducts.map(p=>{
+            const imgs=p.images?.length
+                ? p.images
+                : p.imageData ? [p.imageData] : [];
+
+            return `
+            <div class="product">
+                ${imgs.map(img=>`
+                    <img src="${img}" alt="${escapeHTML(p.name)}">
+                `).join('')}
+
+                <h3>${escapeHTML(p.name)}</h3>
+
+                <b>₹${(p.discountPricePaise || p.pricePaise)/100}</b>
+                ${p.discountPricePaise
+                    ? `<del>₹${p.pricePaise/100}</del>` : ''}
+
+                <p>SKU: ${escapeHTML(p.sku)}</p>
+                <p>Stock: ${p.stock}</p>
+                <p>${escapeHTML(p.description)}</p>
+
+                <div class="actions">
+                    <button data-edit="${p._id}">EDIT</button>
+                    <button data-delete="${p._id}" class="danger">DELETE</button>
+                </div>
+            </div>`;
+        }).join('') || '<p>No products added yet.</p>';
+
+        document.querySelectorAll('[data-edit]').forEach(btn=>{
+            btn.onclick=()=>{
+                editProduct(currentProducts.find(
+                    p=>p._id===btn.dataset.edit
+                ));
+            };
+        });
+
+        document.querySelectorAll('[data-delete]').forEach(btn=>{
+            btn.onclick=async()=>{
+                if(!confirm('Are you sure you want to delete this product?')) return;
+
+                try {
+                    await api('/api/admin/products/'+btn.dataset.delete,{
+                        method:'DELETE'
+                    });
+
+                    await loadProducts();
+                    $('message').textContent='Product deleted successfully.';
+                } catch(error) {
+                    alert(error.message);
+                }
+            };
+        });
+
+    } catch(error) {
+        $('products').textContent=error.message;
+    }
+}
+
+$('productForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+
+    const id=$('productId').value;
+    const price=Number($('price').value);
+    const discount=Number($('discount').value || 0);
+
+    if(!Number.isFinite(price) || price<=0) {
+        $('message').textContent='Enter a valid price.';
+        return;
+    }
+
+    if(discount<0 || (discount>0 && discount>=price)) {
+        $('message').textContent='Discount must be lower than regular price.';
+        return;
+    }
+
+    if(!selectedImages.length) {
+        $('message').textContent='Please upload at least one image.';
+        return;
+    }
+
+    const payload={
+        name:$('name').value.trim(),
+        pricePaise:Math.round(price*100),
+        discountPricePaise:Math.round(discount*100),
+        stock:Number($('stock').value),
+        description:$('description').value,
+        ingredients:$('ingredients').value,
+        images:selectedImages
+    };
+
+    $('saveButton').disabled=true;
+    $('message').textContent='Saving product to MongoDB...';
+
+    try {
+        await api(
+            id ? '/api/admin/products/'+id : '/api/admin/products',
+            {
+                method:id?'PUT':'POST',
+                body:JSON.stringify(payload)
+            }
+        );
+
+        resetForm();
+        await loadProducts();
+
+        $('message').textContent='Product saved successfully!';
+    } catch(error) {
+        $('message').textContent=error.message;
+    } finally {
+        $('saveButton').disabled=false;
+    }
+});
+
+$('cancelButton').onclick=resetForm;
+$('refresh').onclick=loadProducts;
+
+async function loadOrders() {
+    try {
+        const data=await api('/api/admin/orders');
+
+        $('orders').innerHTML=data.map(o=>`
+            <tr>
+                <td>${new Date(o.createdAt).toLocaleString()}</td>
+                <td>
+                    ${escapeHTML(o.customer?.name)}
+                    <br>${escapeHTML(o.customer?.phone)}
+                    <br>${escapeHTML(o.customer?.address)}
+                </td>
+                <td>${(o.items || []).map(i=>
+                    `${escapeHTML(i.name)} × ${i.qty}`
+                ).join('<br>')}</td>
+                <td>₹${(o.totalPaise/100).toFixed(2)}</td>
+                <td>${escapeHTML(o.method)} / ${escapeHTML(o.paymentStatus)}</td>
+                <td>
+                    <select data-order="${o._id}">
+                        ${['PLACED','PACKED','SHIPPED','DELIVERED','CANCELLED'].map(s=>
+                            `<option ${s===o.status?'selected':''}>${s}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            </tr>
+        `).join('');
+
+        document.querySelectorAll('[data-order]').forEach(select=>{
+            select.onchange=async()=>{
+                try {
+                    await api('/api/admin/orders/'+select.dataset.order,{
+                        method:'PATCH',
+                        body:JSON.stringify({status:select.value})
+                    });
+                } catch(error) {
+                    alert(error.message);
+                    loadOrders();
+                }
+            };
+        });
+    } catch(error) {
+        $('orders').innerHTML=`<tr><td>${escapeHTML(error.message)}</td></tr>`;
+    }
+}
+
+async function openDashboard() {
+    $('login').style.display='none';
+    $('dashboard').style.display='block';
+    await Promise.all([loadProducts(),loadOrders()]);
+}
+
+$('loginForm').onsubmit=async event=>{
+    event.preventDefault();
+
+    $('loginError').textContent='Logging in...';
+
+    try {
+        await api('/api/auth/login',{
+            method:'POST',
+            body:JSON.stringify({
+                email:$('email').value,
+                password:$('password').value
+            })
+        });
+
+        await openDashboard();
+    } catch(error) {
+        $('loginError').textContent=error.message;
+    }
+};
+
+$('logout').onclick=async()=>{
+    try {
+        await api('/api/auth/logout',{method:'POST'});
+    } finally {
+        $('dashboard').style.display='none';
+        $('login').style.display='block';
+        $('password').value='';
+    }
+};
+
+// Restore authenticated session after page refresh.
+(async()=>{
+    try {
+        const response=await fetch('/api/admin/products',{
+            credentials:'same-origin'
+        });
+
+        if(response.ok) {
+            await openDashboard();
+        }
+    } catch(error) {
+        console.error(error);
+    }
+})();
+</script>
+
+</body>
+</html>
