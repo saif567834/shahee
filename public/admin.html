@@ -42,8 +42,6 @@ td,th{padding:10px;border-bottom:1px solid #d9b25f44;text-align:left}
 <div id="login">
 <h1>SHAHEE ADMIN</h1>
 <form id="loginForm">
-<label>Admin Email
-<input id="email" type="email" required placeholder="Admin email">
 </label>
 <label>Admin Password
 <input id="password" type="password" required placeholder="Password">
@@ -455,7 +453,6 @@ $('loginForm').onsubmit=async event=>{
         await api('/api/auth/login',{
             method:'POST',
             body:JSON.stringify({
-                email:$('email').value,
                 password:$('password').value
             })
         });
