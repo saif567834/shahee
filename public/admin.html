@@ -143,16 +143,17 @@ const $ = id => document.getElementById(id);
 
 let selectedImages = [];
 let currentProducts = [];
+let adminToken = '';
 
 async function api(url,options={}) {
     const response = await fetch(url,{
         ...options,
         credentials:'same-origin',
-        headers:{
-            ...(options.body ? {'Content-Type':'application/json'} : {}),
-            ...(options.headers || {})
-        }
-    });
+       headers: {
+    ...(options.body ? {'Content-Type':'application/json'} : {}),
+    ...(adminToken ? {'Authorization':'Bearer ' + adminToken} : {}),
+    ...(options.headers || {})
+}
 
     const data = await response.json().catch(()=>({}));
 
@@ -444,22 +445,25 @@ async function openDashboard() {
     await Promise.all([loadProducts(),loadOrders()]);
 }
 
-$('loginForm').onsubmit=async event=>{
+$('loginForm').onsubmit = async event => {
     event.preventDefault();
 
-    $('loginError').textContent='Logging in...';
+    $('loginError').textContent = 'Logging in...';
 
     try {
-        await api('/api/auth/login',{
-            method:'POST',
-            body:JSON.stringify({
-                password:$('password').value
+        const result = await api('/api/admin/login', {
+            method: 'POST',
+            body: JSON.stringify({
+                password: $('password').value
             })
         });
 
+        adminToken = result.token;
+
         await openDashboard();
-    } catch(error) {
-        $('loginError').textContent=error.message;
+
+    } catch (error) {
+        $('loginError').textContent = error.message;
     }
 };
 
