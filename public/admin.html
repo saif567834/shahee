@@ -123,12 +123,12 @@ td,th{padding:10px;border-bottom:1px solid #d9b25f44;text-align:left}
 <table>
 <thead>
 <tr>
-<th>Date</th>
+<th>Date / Order ID</th>
 <th>Customer</th>
 <th>Products</th>
-<th>Total</th>
-<th>Payment</th>
-<th>Status</th>
+<th>Total / Payment</th>
+<th>Order status</th>
+<th>Courier tracking update</th>
 </tr>
 </thead>
 <tbody id="orders"></tbody>
@@ -396,48 +396,48 @@ $('refresh').onclick=loadProducts;
 async function loadOrders() {
     try {
         const data=await api('/api/admin/orders');
-
+        const statuses=['New','Confirmed','Packed','Shipped','Out for delivery','Delivered','Cancelled'];
         $('orders').innerHTML=data.map(o=>`
             <tr>
-                <td>${new Date(o.createdAt).toLocaleString()}</td>
-                <td>
-                    ${escapeHTML(o.customer?.name)}
-                    <br>${escapeHTML(o.customer?.phone)}
-                    <br>${escapeHTML(o.customer?.address)}
-                </td>
-                <td>${(o.items || []).map(i=>
-                    `${escapeHTML(i.name)} × ${i.qty}`
-                ).join('<br>')}</td>
-                <td>₹${(o.totalPaise/100).toFixed(2)}</td>
-                <td>${escapeHTML(o.method)} / ${escapeHTML(o.paymentStatus)}</td>
-                <td>
-                    <select data-order="${o._id}">
-                        ${['PLACED','PACKED','SHIPPED','DELIVERED','CANCELLED'].map(s=>
-                            `<option ${s===o.status?'selected':''}>${s}</option>`
-                        ).join('')}
-                    </select>
+                <td>${new Date(o.createdAt).toLocaleString()}<br><small>${escapeHTML(o._id)}</small></td>
+                <td>${escapeHTML(o.name)}<br>${escapeHTML(o.phone)}<br>${escapeHTML(o.address)}</td>
+                <td>${(o.items || []).map(i=>`${i.s} ml × ${i.q}`).join('<br>')}</td>
+                <td>₹${Number(o.total||0).toFixed(2)}<br>${escapeHTML(o.payment||'')}<br>${escapeHTML(o.paymentStatus||'')}</td>
+                <td><select data-status="${o._id}">${statuses.map(v=>`<option value="${v}" ${v===o.status?'selected':''}>${v}</option>`).join('')}</select></td>
+                <td style="min-width:250px">
+                  <input data-courier="${o._id}" placeholder="Courier name" value="${escapeHTML(o.courier||'')}">
+                  <input data-trackno="${o._id}" placeholder="Tracking / AWB number" value="${escapeHTML(o.trackingNumber||'')}">
+                  <input data-trackurl="${o._id}" placeholder="Courier tracking URL (https://)" value="${escapeHTML(o.trackingUrl||'')}">
+                  <textarea data-note="${o._id}" rows="2" placeholder="Message shown to customer">${escapeHTML(o.adminNote||'')}</textarea>
+                  <button type="button" data-save-order="${o._id}">SAVE TRACKING UPDATE</button>
                 </td>
             </tr>
         `).join('');
-
-        document.querySelectorAll('[data-order]').forEach(select=>{
-            select.onchange=async()=>{
+        document.querySelectorAll('[data-save-order]').forEach(button=>{
+            button.onclick=async()=>{
+                const id=button.dataset.saveOrder;
+                const value=attr=>document.querySelector(`[data-${attr}="${id}"]`).value.trim();
+                button.disabled=true;
                 try {
-                    await api('/api/admin/orders/'+select.dataset.order,{
+                    await api('/api/admin/orders/'+id,{
                         method:'PATCH',
-                        body:JSON.stringify({status:select.value})
+                        body:JSON.stringify({
+                            status:value('status'),
+                            courier:value('courier'),
+                            trackingNumber:value('trackno'),
+                            trackingUrl:value('trackurl'),
+                            adminNote:value('note')
+                        })
                     });
-                } catch(error) {
-                    alert(error.message);
-                    loadOrders();
-                }
+                    alert('Order tracking update saved. Customer can now see it on the website.');
+                } catch(error) { alert(error.message); }
+                finally { button.disabled=false; }
             };
         });
     } catch(error) {
-        $('orders').innerHTML=`<tr><td>${escapeHTML(error.message)}</td></tr>`;
+        $('orders').innerHTML=`<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
     }
 }
-
 async function openDashboard() {
     $('login').style.display='none';
     $('dashboard').style.display='block';
