@@ -20,7 +20,7 @@ dl{display:grid;grid-template-columns:140px 1fr;gap:6px 12px}dt{color:var(--m)}d
 const $=id=>document.getElementById(id);
 const el=(tag,txt,cls)=>{const n=document.createElement(tag);if(txt!=null)n.textContent=txt;if(cls)n.className=cls;return n};
 const date=s=>s?new Date(s).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'Not updated';
-const statusNames={placed:'Order placed',confirmed:'Confirmed',processing:'Processing',packed:'Packed',shipped:'Shipped',out_for_delivery:'Out for delivery',delivered:'Delivered',cancelled:'Cancelled'};
+const statusNames={New:'Order placed',Confirmed:'Confirmed',Packed:'Packed',Shipped:'Shipped','Out for delivery':'Out for delivery',Delivered:'Delivered',Cancelled:'Cancelled','Pending payment':'Payment pending'};
 async function track(){
  $('err').textContent='';$('res').replaceChildren();
  const phone=$('ph').value.trim();
@@ -34,7 +34,7 @@ async function track(){
   $('res').append(el('h2',d.orders.length+' order(s) found'));
   for(const o of d.orders){
    const card=el('section',null,'card');
-   const head=el('div');head.append(el('h3',o.orderId),el('span',statusNames[o.orderStatus]||o.orderStatus,'pill'));card.append(head);
+   const head=el('div');head.append(el('h3','Order details'),el('span',statusNames[o.orderStatus]||o.orderStatus,'pill'));card.append(head);
    const list=el('p',(o.items||[]).map(i=>i.name+' × '+i.qty).join(', ')||'Order items');card.append(list);
    const dl=el('dl');const add=(k,v)=>{if(v!==undefined&&v!==null&&v!=='')dl.append(el('dt',k),el('dd',String(v)))};
    add('Order date',date(o.createdAt));add('Total','₹'+o.amount);
