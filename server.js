@@ -129,6 +129,39 @@ app.post("/api/orders", rl({ windowMs: 60000, max: 10 }), async (q, s) => {
   }
 });
 
+// CUSTOMER ORDER TRACKING: phone number only.
+app.get("/api/track/orders", rl({ windowMs: 60000, max: 10 }), async (q, s) => {
+  try {
+    const phone = str(q.query.phone, 20).replace(/\D/g, "");
+    if (phone.length < 10) {
+      return s.status(400).json({ error: "Enter the 10-digit phone number used at checkout." });
+    }
+    const orders = await Order.find().sort("-createdAt").limit(500).lean();
+    const matches = orders.filter(o => String(o.phone || "").replace(/\D/g, "") === phone);
+    return s.json({
+      orders: matches.map(o => ({
+        createdAt: o.createdAt,
+        updatedAt: o.updatedAt,
+        orderStatus: o.status || "New",
+        paymentMethod: /cash on delivery/i.test(o.payment || "") ? "Cash on delivery" : "Online",
+        paymentStatus: o.paymentStatus || "Pending",
+        items: (o.items || []).map(i => ({
+          name: `${i.s} ml`,
+          qty: i.q
+        })),
+        amount: o.total,
+        courierName: o.courier || "",
+        trackingNumber: o.trackingNumber || "",
+        trackingUrl: o.trackingUrl || "",
+        shippingNotes: o.adminNote || ""
+      }))
+    });
+  } catch (e) {
+    console.error("Phone tracking error:", e);
+    return s.status(500).json({ error: "Unable to retrieve orders right now." });
+  }
+});
+
 // CUSTOMER ORDER TRACKING: requires both order ID and the phone number used at checkout.
 app.get("/api/track", rl({ windowMs: 60000, max: 20 }), async (q, s) => {
   try {
