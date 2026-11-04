@@ -29,6 +29,10 @@ const Order = mongoose.model("Order", new mongoose.Schema({
   items: [{ s: Number, q: Number }],
   total: Number,
   status: { type: String, default: "New" },
+  trackingNumber: { type: String, default: "" },
+  courier: { type: String, default: "" },
+  trackingUrl: { type: String, default: "" },
+  adminNote: { type: String, default: "" },
   paymentStatus: String,
   rzpOrderId: String,
   rzpPaymentId: String
@@ -74,7 +78,7 @@ app.post("/api/orders", rl({ windowMs: 60000, max: 10 }), async (q, s) => {
         payment: "Cash on Delivery",
         items, total
       });
-      return s.json({ ok: true, id: o._id });
+      return s.json({ ok: true, id: o._id, trackingNumber: o.trackingNumber });
     }
 
     const { RAZORPAY_KEY_ID: k, RAZORPAY_KEY_SECRET: sec } = process.env;
@@ -122,6 +126,36 @@ app.post("/api/orders", rl({ windowMs: 60000, max: 10 }), async (q, s) => {
   } catch (e) {
     console.error(e);
     s.status(500).json({ error: "Server error" });
+  }
+});
+
+// CUSTOMER ORDER TRACKING: requires both order ID and the phone number used at checkout.
+app.get("/api/track", rl({ windowMs: 60000, max: 20 }), async (q, s) => {
+  try {
+    const id = str(q.query.orderId, 40);
+    const phone = str(q.query.phone, 20).replace(/\\s+/g, "");
+    if (!mongoose.isValidObjectId(id) || !phone) {
+      return s.status(400).json({ error: "Enter a valid order ID and phone number." });
+    }
+    const order = await Order.findById(id).lean();
+    if (!order || String(order.phone || "").replace(/\\s+/g, "") !== phone) {
+      return s.status(404).json({ error: "Order not found. Check the order ID and phone number." });
+    }
+    return s.json({
+      orderId: String(order._id),
+      createdAt: order.createdAt,
+      status: order.status,
+      payment: order.payment,
+      paymentStatus: order.paymentStatus || "Pending",
+      items: (order.items || []).map(i => ({ size: i.s, quantity: i.q })),
+      total: order.total,
+      trackingNumber: order.trackingNumber || "",
+      courier: order.courier || "",
+      trackingUrl: order.trackingUrl || "",
+      adminNote: order.adminNote || ""
+    });
+  } catch (e) {
+    return s.status(500).json({ error: "Unable to retrieve tracking details." });
   }
 });
 
@@ -190,11 +224,22 @@ app.get("/api/admin/orders", auth, async (q, s) => {
 });
 
 app.patch("/api/admin/orders/:id", auth, async (q, s) => {
-  s.json(await Order.findByIdAndUpdate(
-    q.params.id,
-    { status: str(q.body.status, 20) },
-    { new: true }
-  ));
+  const allowed = ["New", "Confirmed", "Packed", "Shipped", "Out for delivery", "Delivered", "Cancelled"];
+  const status = str(q.body.status, 30);
+  if (!allowed.includes(status)) return s.status(400).json({ error: "Invalid order status." });
+  const trackingUrl = str(q.body.trackingUrl, 500);
+  if (trackingUrl && !/^https:\/\//i.test(trackingUrl)) {
+    return s.status(400).json({ error: "Tracking URL must start with https://." });
+  }
+  const order = await Order.findByIdAndUpdate(q.params.id, {
+    status,
+    trackingNumber: str(q.body.trackingNumber, 100),
+    courier: str(q.body.courier, 100),
+    trackingUrl,
+    adminNote: str(q.body.adminNote, 500)
+  }, { new: true });
+  if (!order) return s.status(404).json({ error: "Order not found." });
+  s.json(order);
 });
 
 // ADMIN GALLERY
